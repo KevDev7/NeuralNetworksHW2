@@ -10,32 +10,36 @@ import time
 from tqdm import tqdm
 import json
 from argparse import ArgumentParser
+import matplotlib.pyplot as plt
 
+unk = '<UNK>' # unknown word
 
-unk = '<UNK>'
-# Consult the PyTorch documentation for information on the functions used below:
-# https://pytorch.org/docs/stable/torch.html
 class FFNN(nn.Module):
     def __init__(self, input_dim, h):
         super(FFNN, self).__init__()
         self.h = h
-        self.W1 = nn.Linear(input_dim, h)
+        self.W1 = nn.Linear(input_dim, h) # This is the first layer (input to hidden)
         self.activation = nn.ReLU() # The rectified linear unit; one valid choice of activation function
-        self.output_dim = 5
-        self.W2 = nn.Linear(h, self.output_dim)
+        self.output_dim = 5 # Output layer to predict one of 5 star ratings
+        self.W2 = nn.Linear(h, self.output_dim) # This is the second layer (hidden to output)
 
-        self.softmax = nn.LogSoftmax() # The softmax function that converts vectors into probability distributions; computes log probabilities for computational benefits
-        self.loss = nn.NLLLoss() # The cross-entropy/negative log likelihood loss taught in class
+        # old self.softmax = nn.LogSoftmax(), new self.softmax = nn.LogSoftmax(dim=0)
+        self.softmax = nn.LogSoftmax(dim=0) # The softmax function that converts vectors into probability distributions; computes log probabilities for computational benefits
+        self.loss = nn.NLLLoss() # The cross-entropy/negative log likelihood loss taught in class (measures how wrong the prediction is)
 
+    # calculates how wrong the network’s prediction is, comparing the predicted rating (predicted_vector) to the actual rating (gold_label).
     def compute_Loss(self, predicted_vector, gold_label):
         return self.loss(predicted_vector, gold_label)
 
     def forward(self, input_vector):
-        # [to fill] obtain first hidden layer representation
+        # obtain first hidden layer representation
+        hidden_representation = self.activation(self.W1(input_vector))
 
-        # [to fill] obtain output layer representation
+        # obtain output layer representation
+        output_layer = self.W2(hidden_representation)
 
-        # [to fill] obtain probability dist.
+        # obtain probability distribution
+        predicted_vector = self.softmax(output_layer)
 
         return predicted_vector
 
@@ -79,7 +83,6 @@ def convert_to_vector_representation(data, word2index):
     return vectorized_data
 
 
-
 def load_data(train_data, val_data):
     with open(train_data) as training_f:
         training = json.load(training_f)
@@ -95,7 +98,7 @@ def load_data(train_data, val_data):
 
     return tra, val
 
-
+# Terminal output and learning curve plot
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-hd", "--hidden_dim", type=int, required = True, help = "hidden_dim")
@@ -106,11 +109,11 @@ if __name__ == "__main__":
     parser.add_argument('--do_train', action='store_true')
     args = parser.parse_args()
 
-    # fix random seeds
+    # Fix random seeds
     random.seed(42)
     torch.manual_seed(42)
 
-    # load data
+    # Load data
     print("========== Loading data ==========")
     train_data, valid_data = load_data(args.train_data, args.val_data) # X_data is a list of pairs (document, y); y in {0,1,2,3,4}
     vocab = make_vocab(train_data)
@@ -119,10 +122,14 @@ if __name__ == "__main__":
     print("========== Vectorizing data ==========")
     train_data = convert_to_vector_representation(train_data, word2index)
     valid_data = convert_to_vector_representation(valid_data, word2index)
-    
 
-    model = FFNN(input_dim = len(vocab), h = args.hidden_dim)
-    optimizer = optim.SGD(model.parameters(),lr=0.01, momentum=0.9)
+    model = FFNN(input_dim=len(vocab), h=args.hidden_dim)
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+
+    # Initialize lists to store losses and accuracies
+    train_losses = []
+    val_accuracies = []
+
     print("========== Training for {} epochs ==========".format(args.epochs))
     for epoch in range(args.epochs):
         model.train()
@@ -130,9 +137,10 @@ if __name__ == "__main__":
         loss = None
         correct = 0
         total = 0
+        epoch_train_loss = 0
         start_time = time.time()
         print("Training started for epoch {}".format(epoch + 1))
-        random.shuffle(train_data) # Good practice to shuffle order of training data
+        random.shuffle(train_data)
         minibatch_size = 16 
         N = len(train_data) 
         for minibatch_index in tqdm(range(N // minibatch_size)):
@@ -150,38 +158,57 @@ if __name__ == "__main__":
                 else:
                     loss += example_loss
             loss = loss / minibatch_size
+
+            # Added: Accumulate training loss
+            epoch_train_loss += loss.item()
             loss.backward()
             optimizer.step()
-        print("Training completed for epoch {}".format(epoch + 1))
+        
+        avg_train_loss = epoch_train_loss / (N // minibatch_size)
+        train_losses.append(avg_train_loss)
+        print(f"Average Training Loss for epoch {epoch + 1}: {avg_train_loss}")
         print("Training accuracy for epoch {}: {}".format(epoch + 1, correct / total))
         print("Training time for this epoch: {}".format(time.time() - start_time))
 
-
+        # Validation loop
+        model.eval()
         loss = None
         correct = 0
         total = 0
         start_time = time.time()
         print("Validation started for epoch {}".format(epoch + 1))
         minibatch_size = 16 
-        N = len(valid_data) 
-        for minibatch_index in tqdm(range(N // minibatch_size)):
-            optimizer.zero_grad()
-            loss = None
-            for example_index in range(minibatch_size):
-                input_vector, gold_label = valid_data[minibatch_index * minibatch_size + example_index]
-                predicted_vector = model(input_vector)
-                predicted_label = torch.argmax(predicted_vector)
-                correct += int(predicted_label == gold_label)
-                total += 1
-                example_loss = model.compute_Loss(predicted_vector.view(1,-1), torch.tensor([gold_label]))
-                if loss is None:
-                    loss = example_loss
-                else:
-                    loss += example_loss
-            loss = loss / minibatch_size
-        print("Validation completed for epoch {}".format(epoch + 1))
-        print("Validation accuracy for epoch {}: {}".format(epoch + 1, correct / total))
-        print("Validation time for this epoch: {}".format(time.time() - start_time))
+        N = len(valid_data)
+        with torch.no_grad():  # No need to track gradients for validation
+            for minibatch_index in tqdm(range(N // minibatch_size)):
+                loss = None
+                for example_index in range(minibatch_size):
+                    input_vector, gold_label = valid_data[minibatch_index * minibatch_size + example_index]
+                    predicted_vector = model(input_vector)
+                    predicted_label = torch.argmax(predicted_vector)
+                    correct += int(predicted_label == gold_label)
+                    total += 1
+                    example_loss = model.compute_Loss(predicted_vector.view(1,-1), torch.tensor([gold_label]))
+                    if loss is None:
+                        loss = example_loss
+                    else:
+                        loss += example_loss
+                loss = loss / minibatch_size
+            val_accuracy = correct / total
+            val_accuracies.append(val_accuracy)
+            print("Validation completed for epoch {}".format(epoch + 1))
+            print("Validation accuracy for epoch {}: {}".format(epoch + 1, val_accuracy))
+            print("Validation time for this epoch: {}".format(time.time() - start_time))
 
-    # write out to results/test.out
-    
+    # Plot learning curve
+    plt.figure(figsize=(12, 6))
+    plt.plot(range(1, args.epochs + 1), train_losses, label="Training Loss")
+    plt.plot(range(1, args.epochs + 1), val_accuracies, label="Validation Accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Value")
+    plt.title("Learning Curve (Training Loss and Validation Accuracy)")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    # Write out to results/test.out (optional)

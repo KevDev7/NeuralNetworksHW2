@@ -12,6 +12,7 @@ import json
 import string
 from argparse import ArgumentParser
 import pickle
+import matplotlib.pyplot as plt
 
 unk = '<UNK>'
 # Consult the PyTorch documentation for information on the functions used below:
@@ -31,12 +32,19 @@ class RNN(nn.Module):
 
     def forward(self, inputs):
         # [to fill] obtain hidden layer representation (https://pytorch.org/docs/stable/generated/torch.nn.RNN.html)
-        _, hidden = 
+        # old: _, hidden = 
+        output, hidden = self.rnn(inputs)
+
         # [to fill] obtain output layer representations
+        output_layer = self.W(hidden.squeeze(0))
 
         # [to fill] sum over output 
+        # Since we are using the final hidden state to represent the sequence, we do not sum over outputs.
+        # However, if needed, you can modify this step if the task requires summing outputs. We leave this as is.
+        # summed_output = torch.sum(output_layer, dim=0)
 
         # [to fill] obtain probability dist.
+        predicted_vector = self.softmax(output_layer)
 
         return predicted_vector
 
@@ -87,6 +95,9 @@ if __name__ == "__main__":
 
     last_train_accuracy = 0
     last_validation_accuracy = 0
+
+    train_losses = []
+    validation_accuracies = []
 
     while not stopping_condition:
         random.shuffle(train_data)
@@ -174,9 +185,24 @@ if __name__ == "__main__":
             last_validation_accuracy = validation_accuracy
             last_train_accuracy = trainning_accuracy
 
+        # Added: Calculate average loss for the epoch
+        avg_loss = loss_total / loss_count
+        # Added: Ensure validation accuracy is appended before stopping condition
+        validation_accuracies.append(validation_accuracy)
+        train_losses.append(avg_loss)
+
         epoch += 1
 
-
+    # Plotting the learning curve
+    epochs_range = range(1, epoch + 1)
+    plt.figure(figsize=(10, 5))
+    plt.plot(epochs_range, train_losses, label='Training Loss')
+    plt.plot(epochs_range, validation_accuracies, label='Validation Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Value')
+    plt.title('Learning Curve (Training Loss and Validation Accuracy)')
+    plt.legend()
+    plt.show()
 
     # You may find it beneficial to keep track of training accuracy or training loss;
 
