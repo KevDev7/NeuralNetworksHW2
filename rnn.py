@@ -194,15 +194,15 @@ if __name__ == "__main__":
         epoch += 1
 
     # Plotting the learning curve
-    epochs_range = range(1, epoch + 1)
-    plt.figure(figsize=(10, 5))
-    plt.plot(epochs_range, train_losses, label='Training Loss')
-    plt.plot(epochs_range, validation_accuracies, label='Validation Accuracy')
-    plt.xlabel('Epoch')
-    plt.ylabel('Value')
-    plt.title('Learning Curve (Training Loss and Validation Accuracy)')
-    plt.legend()
-    plt.show()
+    # epochs_range = range(1, epoch + 1)
+    # plt.figure(figsize=(10, 5))
+    # plt.plot(epochs_range, train_losses, label='Training Loss')
+    # plt.plot(epochs_range, validation_accuracies, label='Validation Accuracy')
+    # plt.xlabel('Epoch')
+    # plt.ylabel('Value')
+    # plt.title('Learning Curve (Training Loss and Validation Accuracy)')
+    # plt.legend()
+    # plt.show()
 
     # You may find it beneficial to keep track of training accuracy or training loss;
 
