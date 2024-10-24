@@ -201,14 +201,14 @@ if __name__ == "__main__":
             print("Validation time for this epoch: {}".format(time.time() - start_time))
 
     # Plot learning curve
-    plt.figure(figsize=(12, 6))
-    plt.plot(range(1, args.epochs + 1), train_losses, label="Training Loss")
-    plt.plot(range(1, args.epochs + 1), val_accuracies, label="Validation Accuracy")
-    plt.xlabel("Epoch")
-    plt.ylabel("Value")
-    plt.title("Learning Curve (Training Loss and Validation Accuracy)")
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+    # plt.figure(figsize=(12, 6))
+    # plt.plot(range(1, args.epochs + 1), train_losses, label="Training Loss")
+    # plt.plot(range(1, args.epochs + 1), val_accuracies, label="Validation Accuracy")
+    # plt.xlabel("Epoch")
+    # plt.ylabel("Value")
+    # plt.title("Learning Curve (Training Loss and Validation Accuracy)")
+    # plt.legend()
+    # plt.grid(True)
+    # plt.show()
 
     # Write out to results/test.out (optional)
